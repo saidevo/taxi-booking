@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+    stages {
+        stage('clone') {
+            steps {
+                git branch: 'dev', url: 'https://github.com/ameelmohammad/taxi-booking.git'
+            }
+        }
+        stage('build the package') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+        stage('code test') {
+            steps {
+                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=myproject -Dsonar.host.url=http://54.163.43.119:9000 -Dsonar.login=sqp_966311cc4599786ec5e07757aadee229d6aa15ef'
+            }
+        }
+        stage('store artifact') {
+            steps {
+               nexusArtifactUploader artifacts: [[artifactId: 'maven-project', classifier: '', file: '/var/lib/jenkins/workspace/taxes/taxi-booking/target/taxi-booking-1.0.1.war', type: 'war']], credentialsId: '01bb965e-b665-4de3-a7d1-c2e51416f88e', groupId: 'com.example.maven-project', nexusUrl: '43.206.211.251:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'maven-snapshots', version: '1.0-SNAPSHOT'
+            }
+        }
+        stage('docker build and push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: '8b3aebd0-c467-48d7-809c-51888fdd33bc') {
+                        sh 'docker build -t ameelmohammad/sample:tag1 .'
+                        sh 'docker push ameelmohammad/sample:tag1'
+                    }
+                }
+            }
+        }
+        stage('kubernetes deployment') {
+            steps {
+                sh 'aws eks update-kubeconfig --region us-east-1 --name samples-ekscluster'
+            }
+        }
+        stage('k8s deploy') {
+            steps {
+                sh 'kubectl create -f deployment.yaml'
+            }
+        }
+    }
+}
