@@ -1,20 +1,30 @@
-pipeline{
+pipeline {
     agent any
-    stages{
-        stage('checkout'){
-            steps{
-                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Venna12/taxi-booking.git']])
+
+    stages {
+        stage('clone the code') {
+            steps {
+                echo 'cloning'
+                git branch: 'dev', url: 'https://github.com/ameelmohammad/taxi-booking.git'           
             }
         }
-        stage('Build'){
-            steps{
-                sh "mvn package"
+        stage('build the code') {
+            steps {
+                echo 'build'
+                sh 'mvn package'
             }
         }
-        stage('Deploy to tomcat'){
-            steps{
-                deploy adapters: [tomcat9(credentialsId: '527db3ea-545b-436b-bcbd-3c786d08d357', path: '', url: 'http://3.137.216.135:8080/')], contextPath: 'goutham', war: '**/*.war'
+        stage('sonar scan') {
+            steps {
+                echo 'sonar'
+                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=sainath -Dsonar.host.url=http://13.233.112.69:9000 -Dsonar.login=sqp_751007a4a4cd6da0f7f2997987e6b6b832f78a09'
             }
+        }
+        stage('deploy the code') {
+           steps {
+               echo 'deploy'
+               deploy adapters: [tomcat9(credentialsId: 'c7d6be75-71a9-4d31-8beb-7861d2afd917', path: '', url: 'http://13.233.112.69:8090/')], contextPath: null, onFailure: false, war: '**/*.war'
+           }
         }
     }
 }
